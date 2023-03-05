@@ -1,6 +1,8 @@
 import { Roboto_Flex } from "next/font/google";
 import {
   ChangeEventHandler,
+  Dispatch,
+  SetStateAction,
   useCallback,
   useLayoutEffect,
   useRef,
@@ -8,55 +10,93 @@ import {
 } from "react";
 import styles from "./VariablePreview.module.scss";
 
-const roboto = Roboto_Flex({ subsets: ["latin"] });
+const roboto = Roboto_Flex({
+  subsets: ["latin"],
+  axes: [
+    "GRAD",
+    "XTRA",
+    "YOPQ",
+    "YTAS",
+    "YTDE",
+    "YTFI",
+    "YTLC",
+    "YTUC",
+    "opsz",
+    "slnt",
+    "wdth",
+  ],
+});
 
 //const variableSettings = 'font-variation-settings: "wdth" 600, "wght" 200, "opsz" 48;';
 
-type Axis = {
+type Axes = {
   wght: string;
   wdth: string;
+  slnt: string;
+  YTAS: string;
 };
 
-const init: Axis = {
+const init: Axes = {
   wght: "100",
   wdth: "100",
+  slnt: "0",
+  YTAS: "750",
 };
 
-const toString = (axis: Axis) => {
-  return Object.entries(axis)
+const toString = (axes: Axes) => {
+  return Object.entries(axes)
     .map((e) => `"${e[0]}" ${e[1]}`)
     .join(",");
 };
 
-// function Control({ axis, setAxis, update, min, max, axisKey }) {
-//   return (
-//     <div>
-//       <input
-//         type="range"
-//         min={100}
-//         max={1000}
-//         onChange={(e) => {
-//           update(toString({ ...axis, wght: e.target.value }));
-//         }}
-//         onMouseUp={(e) => {
-//           setAxis({
-//             ...axis,
-//             wght: e.currentTarget.value,
-//           });
-//         }}
-//       />
-//       <label>weight</label>
-//     </div>
-//   );
-// }
+type ControlProps = {
+  axes: Axes;
+  setAxes: Dispatch<SetStateAction<Axes>>;
+  update: (style: string) => void;
+  min: number;
+  max: number;
+  axisKey: keyof Axes;
+  label: string;
+};
+
+function Control({
+  axes,
+  setAxes,
+  update,
+  min,
+  max,
+  axisKey,
+  label,
+}: ControlProps) {
+  return (
+    <div>
+      <input
+        type="range"
+        defaultValue={axes[axisKey]}
+        min={min}
+        max={max}
+        onChange={(e) => {
+          update(toString({ ...axes, [axisKey]: e.target.value }));
+        }}
+        onMouseUp={(e) => {
+          setAxes({
+            ...axes,
+            [axisKey]: e.currentTarget.value,
+          });
+        }}
+      />
+      <label>{label}</label>
+    </div>
+  );
+}
 
 export function VariablePreview({ text }: { text: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [axis, setAxis] = useState<Axis>(init);
+  const [axes, setAxes] = useState<Axes>(init);
 
   useLayoutEffect(() => {
     if (ref.current) {
-      ref.current.style.fontVariationSettings = toString(axis);
+      ref.current.style.fontVariationSettings = toString(axes);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -67,28 +107,19 @@ export function VariablePreview({ text }: { text: string }) {
     }
   }, []);
 
+  const C = (props: Omit<ControlProps, "axes" | "setAxes" | "update">) => {
+    return <Control axes={axes} setAxes={setAxes} update={update} {...props} />;
+  };
+
   return (
     <div>
       <div ref={ref} className={`${roboto.className} ${styles.preview}`}>
         {text}
       </div>
-      <div>
-        <input
-          type="range"
-          min={100}
-          max={1000}
-          onChange={(e) => {
-            update(toString({ ...axis, wght: e.target.value }));
-          }}
-          onMouseUp={(e) => {
-            setAxis({
-              ...axis,
-              wght: e.currentTarget.value,
-            });
-          }}
-        />
-        <label>weight</label>
-      </div>
+      <C min={100} max={1000} axisKey="wght" label="weight" />
+      <C min={25} max={151} axisKey="wdth" label="width" />
+      <C min={-10} max={0} axisKey="slnt" label="slant" />
+      <C min={649} max={854} axisKey="YTAS" label="Ascender Height" />
     </div>
   );
 }
